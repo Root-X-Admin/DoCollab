@@ -10,10 +10,9 @@ import MessagesPage from "./MessagesPage";
 const navItems = [
   { path: "/app/discover", label: "Discover" },
   { path: "/app/requests", label: "Collab Requests" },
-  { path: "/app/messages", label: "Messages" },   // ← NEW
+  { path: "/app/messages", label: "Messages" },
   { path: "/app/profile", label: "My Profile" },
 ];
-
 
 function DashboardLayout() {
   const navigate = useNavigate();
@@ -43,6 +42,7 @@ function DashboardLayout() {
     } catch (err) {
       console.error("Logout error:", err.message);
     } finally {
+      localStorage.removeItem("docollab_token");
       navigate("/login");
     }
   };
@@ -126,14 +126,26 @@ function DashboardLayout() {
 
         <div className="flex-1 p-4 md:p-6">
           <Routes>
+            {/* Discover list */}
             <Route path="discover" element={<DiscoverPage />} />
+
+            {/* My own profile */}
             <Route path="profile" element={<ProfilePage />} />
+
+            {/* Someone else's profile (LinkedIn-style public view) */}
+            <Route path="profile/:userId" element={<ProfilePage />} />
+
+            {/* Collab requests */}
             <Route path="requests" element={<RequestsPage />} />
+
+            {/* Single chat */}
             <Route path="chat/:id" element={<ChatPage />} />
+
+            {/* Messages list + detail */}
             <Route path="messages" element={<MessagesPage />} />
             <Route path="messages/:id" element={<MessagesPage />} />
 
-
+            {/* Fallback */}
             <Route
               path="*"
               element={

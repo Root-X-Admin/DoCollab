@@ -136,9 +136,7 @@ function DiscoverPage() {
         onSubmit={handleSearch}
       >
         <div>
-          <label className="block text-[11px] text-slate-300 mb-1">
-            Niche
-          </label>
+          <label className="block text-[11px] text-slate-300 mb-1">Niche</label>
           <input
             type="text"
             name="niche"
@@ -218,7 +216,15 @@ function DiscoverPage() {
                 key={profile._id}
                 className="rounded-2xl bg-white/5 border border-white/10 p-4 flex flex-col justify-between"
               >
-                <div>
+                {/* 🔗 Clickable top area → opens LinkedIn-style profile page */}
+                <Link
+                  to={
+                    user._id
+                      ? `/app/profile/${user._id}`
+                      : "/app/profile"
+                  }
+                  className="block -mx-2 -mt-2 px-2 pt-2 pb-2 rounded-xl hover:bg-white/5 transition"
+                >
                   <div className="flex items-start justify-between mb-2 gap-2">
                     <div>
                       <p className="text-sm font-semibold text-slate-100">
@@ -269,11 +275,15 @@ function DiscoverPage() {
                       Goals: {profile.collabGoals.join(" • ")}
                     </p>
                   )}
-                </div>
+                </Link>
 
+                {/* Collab request area (not inside Link, so it doesn't navigate) */}
                 <div className="mt-3">
                   {!isActive ? (
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-[11px] text-slate-500">
+                        View full profile for more info
+                      </span>
                       <button
                         onClick={() =>
                           openRequestForm(profile._id, user.name || "creator")

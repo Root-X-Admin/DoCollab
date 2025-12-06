@@ -1,21 +1,29 @@
-import CreatorProfile from "../models/CreatorProfile.js";
+// server/src/controllers/profileController.js
 
-// @desc    Get my profile + user info
-// @route   GET /api/profile/me
-// @access  Private
+import CreatorProfile from "../models/CreatorProfile.js";
+import User from "../models/User.js";
+
+// ============================
+// GET /api/profile/me
+// Return: { user, profile }
+// ============================
 export const getMyProfile = async (req, res) => {
   try {
     const profile = await CreatorProfile.findOne({ user: req.user._id }).populate(
       "user",
-      "name email"
+      "name email username avatar authProvider"
     );
 
     if (!profile) {
+      // no profile yet – still return user info
       return res.json({
         user: {
           _id: req.user._id,
           name: req.user.name,
           email: req.user.email,
+          username: req.user.username,
+          avatar: req.user.avatar,
+          authProvider: req.user.authProvider,
         },
         profile: null,
       });
@@ -26,17 +34,21 @@ export const getMyProfile = async (req, res) => {
       profile,
     });
   } catch (err) {
-    console.error("Get profile error:", err.message);
+    console.error("Get my profile error:", err.message);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
-// @desc    Create or update my profile
-// @route   PUT /api/profile/me
-// @access  Private
-export const upsertMyProfile = async (req, res) => {
+// ============================
+// PUT /api/profile/me
+// Create or update my profile
+// Body: profile fields
+// Return: { user, profile }
+// ============================
+export const updateMyProfile = async (req, res) => {
   try {
     const {
+      headline,
       bio,
       niches,
       primaryPlatform,
@@ -46,19 +58,45 @@ export const upsertMyProfile = async (req, res) => {
       audienceRange,
       collabGoals,
       openToCollab,
+      // 🔹 new fields
+      bannerUrl,
+      avatarUrl,
+      links,
+      tags,
     } = req.body;
+
+    const toArray = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      return [value];
+    };
+
+    const safeLinks = {
+      youtube: links?.youtube || "",
+      instagram: links?.instagram || "",
+      tiktok: links?.tiktok || "",
+      twitter: links?.twitter || "",
+      website: links?.website || "",
+    };
 
     const payload = {
       user: req.user._id,
+      headline: headline || "",
       bio: bio || "",
-      niches: Array.isArray(niches) ? niches : [],
+      niches: toArray(niches),
       primaryPlatform: primaryPlatform || "",
       mainHandle: mainHandle || "",
       location: location || "",
-      languages: Array.isArray(languages) ? languages : [],
+      languages: toArray(languages),
       audienceRange: audienceRange || "",
-      collabGoals: Array.isArray(collabGoals) ? collabGoals : [],
-      openToCollab: typeof openToCollab === "boolean" ? openToCollab : true,
+      collabGoals: toArray(collabGoals),
+      openToCollab:
+        typeof openToCollab === "boolean" ? openToCollab : true,
+      openToCollabs:
+        typeof openToCollab === "boolean" ? openToCollab : true,
+      bannerUrl: bannerUrl || "",
+      links: safeLinks,
+      tags: toArray(tags),
     };
 
     const profile = await CreatorProfile.findOneAndUpdate(
@@ -69,19 +107,27 @@ export const upsertMyProfile = async (req, res) => {
         new: true,
         setDefaultsOnInsert: true,
       }
-    ).populate("user", "name email");
+    ).populate("user", "name email username avatar authProvider");
+
+    // 🔹 If a new avatarUrl came from the client, sync it to the User model
+    if (avatarUrl) {
+      await User.findByIdAndUpdate(req.user._id, { avatar: avatarUrl });
+      profile.user.avatar = avatarUrl;
+    }
 
     return res.json({
       user: profile.user,
       profile,
     });
   } catch (err) {
-    console.error("Upsert profile error:", err.message);
+    console.error("Update (upsert) profile error:", err.message);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
-// Helper: compute overlap ratio
+// ============================
+// Helper: similarity scoring
+// ============================
 const overlapScore = (arr1 = [], arr2 = []) => {
   if (!Array.isArray(arr1) || !Array.isArray(arr2) || !arr1.length || !arr2.length)
     return 0;
@@ -106,9 +152,11 @@ const audienceDistance = (a, b) => {
   return Math.min(1, Math.abs(idxA - idxB) / (order.length - 1));
 };
 
-// @desc    Discover creators with compatibility scoring
-// @route   GET /api/profile/discover
-// @access  Private
+// ============================
+// GET /api/profile/discover
+// Query: ?limit=20&niche=...&language=...&location=...
+// Return: { creators: [CreatorProfileWithScore] }
+// ============================
 export const discoverCreators = async (req, res) => {
   try {
     const meProfile = await CreatorProfile.findOne({ user: req.user._id });
@@ -138,7 +186,7 @@ export const discoverCreators = async (req, res) => {
     }
 
     const candidates = await CreatorProfile.find(query)
-      .populate("user", "name email")
+      .populate("user", "name email username avatar")
       .limit(Number(limit));
 
     // Weights for scoring (sum = 100)
@@ -153,7 +201,6 @@ export const discoverCreators = async (req, res) => {
     const computeCompatibility = (me, other) => {
       let score = 0;
 
-      // Normalize arrays
       const meNiches = me.niches || [];
       const otherNiches = other.niches || [];
       const meLangs = me.languages || [];
@@ -167,12 +214,12 @@ export const discoverCreators = async (req, res) => {
       // 2) Language overlap
       score += overlapScore(meLangs, otherLangs) * WEIGHTS.languages;
 
-      // 3) Audience range similarity (distance -> similarity)
+      // 3) Audience range similarity
       const dist = audienceDistance(me.audienceRange, other.audienceRange); // 0–1
       const audienceSim = 1 - dist;
       score += audienceSim * WEIGHTS.audience;
 
-      // 4) Same location (rough match)
+      // 4) Same location
       if (
         me.location &&
         other.location &&
@@ -184,7 +231,6 @@ export const discoverCreators = async (req, res) => {
       // 5) Collab goals overlap
       score += overlapScore(meGoals, otherGoals) * WEIGHTS.goals;
 
-      // Clamp and round
       if (score < 0) score = 0;
       if (score > 100) score = 100;
 
@@ -202,6 +248,44 @@ export const discoverCreators = async (req, res) => {
     return res.json({ creators: creatorsWithScore });
   } catch (err) {
     console.error("Discover creators error:", err.message);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// GET /api/profile/user/:userId
+// View another creator's profile
+// Return: { user, profile }
+// ============================
+export const getProfileByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select(
+      "_id name username email avatar"
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let profile = await CreatorProfile.findOne({ user: userId });
+    if (!profile) {
+      // allow empty profile view (new user)
+      profile = await CreatorProfile.create({ user: userId });
+    }
+
+    return res.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar || "",
+      },
+      profile,
+    });
+  } catch (err) {
+    console.error("Get profile by userId error:", err.message);
     return res.status(500).json({ message: "Server error" });
   }
 };
