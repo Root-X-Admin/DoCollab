@@ -1,7 +1,8 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRightIcon, PlayCircleIcon } from "@heroicons/react/24/outline";
+import api from "../lib/api";
 
 const tags = [
   "YouTube Educators",
@@ -12,6 +13,36 @@ const tags = [
 ];
 
 function LandingPage() {
+  const navigate = useNavigate();
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // 🔐 If user already logged in, redirect from "/" to "/app/discover"
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await api.get("/auth/me");
+        if (res.data && res.data.email) {
+          navigate("/app/discover");
+          return;
+        }
+      } catch (err) {
+        // 401 / not authenticated → just show normal landing
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black text-slate-100">
+        <div className="text-sm text-slate-400">Checking your session...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-slate-100">
       {/* Top nav */}

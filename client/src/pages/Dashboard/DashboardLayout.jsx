@@ -5,12 +5,15 @@ import ProfilePage from "./ProfilePage";
 import RequestsPage from "./RequestsPage";
 import ChatPage from "./ChatPage";
 import api from "../../lib/api";
+import MessagesPage from "./MessagesPage";
 
 const navItems = [
   { path: "/app/discover", label: "Discover" },
   { path: "/app/requests", label: "Collab Requests" },
+  { path: "/app/messages", label: "Messages" },   // ← NEW
   { path: "/app/profile", label: "My Profile" },
 ];
+
 
 function DashboardLayout() {
   const navigate = useNavigate();
@@ -127,6 +130,9 @@ function DashboardLayout() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="requests" element={<RequestsPage />} />
             <Route path="chat/:id" element={<ChatPage />} />
+            <Route path="messages" element={<MessagesPage />} />
+            <Route path="messages/:id" element={<MessagesPage />} />
+
 
             <Route
               path="*"

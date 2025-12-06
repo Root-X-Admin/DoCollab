@@ -1,12 +1,26 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
+
+const TOKEN_KEY = "docollab_token";
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setCheckingSession(false);
+  }, []);
+
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -17,26 +31,43 @@ function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await api.post("/auth/register", form);
-      // user is now logged in (cookie set) → redirect to dashboard
+      const res = await api.post("/auth/register", form);
+      const { token } = res.data || {};
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
       navigate("/app/discover");
     } catch (err) {
       setError(
-        err.response?.data?.message || "Something went wrong. Please try again."
+        err.response?.data?.message ||
+          "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black px-4">
+        <div className="text-sm text-slate-400">
+          Checking your session...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black px-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl text-slate-100">
         <div className="mb-6">
-          <Link to="/" className="text-xs text-slate-400 hover:text-slate-200">
+          <Link
+            to="/"
+            className="text-xs text-slate-400 hover:text-slate-200 inline-flex items-center gap-2"
+          >
             ← Back to home
           </Link>
-          <h1 className="mt-3 text-2xl font-semibold text-white">
+          <h1 className="mt-3 text-2xl font-semibold text:white">
             Join DoCollab
           </h1>
           <p className="text-sm text-slate-400">
@@ -51,7 +82,7 @@ function RegisterPage() {
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4 mb-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-xs text-slate-300 mb-1">
               Name / Handle
@@ -63,6 +94,21 @@ function RegisterPage() {
               onChange={handleChange}
               className="w-full rounded-xl bg-black/40 border border-white/15 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
               placeholder="Terminalord / @terminalord"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-300 mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={form.username}
+              onChange={handleChange}
+              className="w-full rounded-xl bg-black/40 border border-white/15 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              placeholder="terminalord"
               required
             />
           </div>
@@ -91,7 +137,7 @@ function RegisterPage() {
               name="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full rounded-xl bg-black/40 border border-white/15 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl bg-black/40 border border:white/15 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
               placeholder="••••••••"
               required
               minLength={6}
@@ -106,6 +152,20 @@ function RegisterPage() {
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
+
+        <div className="flex items-center gap-2 my-3">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
+            or
+          </span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        <GoogleAuthButton
+          mode="signup"
+          onSuccess={() => navigate("/app/discover")}
+          onError={(msg) => setError(msg)}
+        />
 
         <p className="mt-4 text-xs text-slate-400 text-center">
           Already collaborating?{" "}

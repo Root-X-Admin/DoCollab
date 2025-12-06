@@ -1,15 +1,16 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+// Now load all other modules
+import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import connectDB from "./src/config/db.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import profileRoutes from "./src/routes/profileRoutes.js";
 import collabRoutes from "./src/routes/collabRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
-
-dotenv.config();
+import uploadRoutes from "./src/routes/uploadRoutes.js";
 
 const app = express();
 
@@ -26,7 +27,6 @@ app.use(
   })
 );
 
-app.use(cookieParser());
 app.use(morgan("dev"));
 
 // Routes
@@ -38,6 +38,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/collab", collabRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/upload", uploadRoutes);
+
 
 // Start server
 const PORT = process.env.PORT || 5000;

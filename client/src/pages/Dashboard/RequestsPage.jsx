@@ -76,8 +76,9 @@ function RequestsPage() {
   };
 
   const goToChat = (id) => {
-    navigate(`/app/chat/${id}`);
+    navigate(`/app/messages/${id}`);
   };
+
 
   const formatDate = (value) => {
     if (!value) return "";

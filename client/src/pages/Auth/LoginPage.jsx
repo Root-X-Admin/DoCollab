@@ -1,12 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
+
+const TOKEN_KEY = "docollab_token";
 
 function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
+
+  // 🔐 If user already logged in (JWT exists), redirect to dashboard
+  useEffect(() => {
+    setCheckingSession(false);
+  }, []);
+
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -17,7 +27,11 @@ function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await api.post("/auth/login", form);
+      const res = await api.post("/auth/login", form);
+      const { token } = res.data || {};
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
       navigate("/app/discover");
     } catch (err) {
       setError(
@@ -28,11 +42,24 @@ function LoginPage() {
     }
   };
 
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black px-4">
+        <div className="text-sm text-slate-400">
+          Checking your session...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black px-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl text-slate-100">
         <div className="mb-6">
-          <Link to="/" className="text-xs text-slate-400 hover:text-slate-200">
+          <Link
+            to="/"
+            className="text-xs text-slate-400 hover:text-slate-200 inline-flex items-center gap-2"
+          >
             ← Back to home
           </Link>
           <h1 className="mt-3 text-2xl font-semibold text-white">
@@ -49,7 +76,7 @@ function LoginPage() {
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4 mb-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-xs text-slate-300 mb-1">Email</label>
             <input
@@ -76,6 +103,14 @@ function LoginPage() {
               placeholder="••••••••"
               required
             />
+            <div className="mt-1 text-[11px] text-right">
+              <Link
+                to="/forgot-password"
+                className="text-brand-300 hover:text-brand-200"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button
@@ -86,6 +121,20 @@ function LoginPage() {
             {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
+
+        <div className="flex items-center gap-2 my-3">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
+            or
+          </span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        <GoogleAuthButton
+          mode="login"
+          onSuccess={() => navigate("/app/discover")}
+          onError={(msg) => setError(msg)}
+        />
 
         <p className="mt-4 text-xs text-slate-400 text-center">
           New to DoCollab?{" "}

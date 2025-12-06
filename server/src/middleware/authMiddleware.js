@@ -5,13 +5,8 @@ export const protect = async (req, res, next) => {
   try {
     let token = null;
 
-    // 1) Check cookie
-    if (req.cookies && req.cookies.jwt) {
-      token = req.cookies.jwt;
-    }
-
-    // 2) Optionally check Authorization header (Bearer <token>)
-    if (!token && req.headers.authorization?.startsWith("Bearer")) {
+    // Always require Authorization header (Bearer token)
+    if (req.headers.authorization?.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
     }
 
@@ -21,8 +16,15 @@ export const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = await User.findById(decoded.userId).select("-password");
+    // Our tokens ALWAYS use { id }
+    const userId = decoded.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ message: "Not authorized, invalid token payload" });
+    }
 
+    req.user = await User.findById(userId).select("-password");
     if (!req.user) {
       return res.status(401).json({ message: "User not found" });
     }
