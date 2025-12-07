@@ -276,7 +276,8 @@ function ProfilePage() {
 
   const { user, profile } = data;
 
-  if (loading || !user || !profile) {
+  // ✅ allow profile to be null (new users)
+  if (loading || !user) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-slate-950">
         <div className="text-sm text-slate-400 animate-pulse">
@@ -286,10 +287,13 @@ function ProfilePage() {
     );
   }
 
+  // ✅ safe fallback so UI doesn't crash when profile is null
+  const profileSafe = profile || {};
+
   const userInitials = initialsFromName(user.name || user.username || "");
   const audienceText =
-    profile.audienceMin || profile.audienceMax
-      ? `${profile.audienceMin || 0} – ${profile.audienceMax || 0}`
+    profileSafe.audienceMin || profileSafe.audienceMax
+      ? `${profileSafe.audienceMin || 0} – ${profileSafe.audienceMax || 0}`
       : "Not specified";
 
   const avatarToShow = form.avatarUrl || user.avatar || "";
@@ -381,20 +385,22 @@ function ProfilePage() {
                     <p className="text-xs text-slate-400">@{user.username}</p>
                   )}
                   <p className="mt-1 text-xs md:text-sm text-slate-300">
-                    {profile.headline || profile.niche || "Creator on DoCollab"}
+                    {profileSafe.headline ||
+                      profileSafe.niche ||
+                      "Creator on DoCollab"}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                    {profile.location && <span>{profile.location}</span>}
-                    {profile.language && (
+                    {profileSafe.location && <span>{profileSafe.location}</span>}
+                    {profileSafe.language && (
                       <>
                         <span>•</span>
-                        <span>{profile.language}</span>
+                        <span>{profileSafe.language}</span>
                       </>
                     )}
-                    {profile.niche && (
+                    {profileSafe.niche && (
                       <>
                         <span>•</span>
-                        <span>{profile.niche}</span>
+                        <span>{profileSafe.niche}</span>
                       </>
                     )}
                   </div>
@@ -416,7 +422,6 @@ function ProfilePage() {
                   <>
                     <button
                       onClick={() => {
-                        // open collab request modal in future
                         navigate("/app/requests");
                       }}
                       className="px-4 py-2 rounded-full bg-brand-500 hover:bg-brand-600 text-xs md:text-sm font-medium text-white shadow-md shadow-brand-500/40 transition"
@@ -425,7 +430,6 @@ function ProfilePage() {
                     </button>
                     <button
                       onClick={() => {
-                        // later you can wire this to open chat with this user
                         navigate("/app/messages");
                       }}
                       className="px-4 py-2 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 text-xs md:text-sm text-slate-100 transition"
@@ -458,9 +462,9 @@ function ProfilePage() {
             {/* About */}
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
               <h2 className="text-sm font-semibold mb-2">About</h2>
-              {profile.bio ? (
+              {profileSafe.bio ? (
                 <p className="text-xs md:text-sm text-slate-200 whitespace-pre-line">
-                  {profile.bio}
+                  {profileSafe.bio}
                 </p>
               ) : isSelfProfile ? (
                 <p className="text-xs text-slate-400">
@@ -480,20 +484,20 @@ function ProfilePage() {
                 <h2 className="text-sm font-semibold">Collaboration</h2>
                 <span
                   className={`px-2.5 py-1 rounded-full text-[11px] border ${
-                    profile.openToCollabs || profile.openToCollab
+                    profileSafe.openToCollabs || profileSafe.openToCollab
                       ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40"
                       : "bg-slate-700/40 text-slate-300 border-slate-500/40"
                   }`}
                 >
-                  {profile.openToCollabs || profile.openToCollab
+                  {profileSafe.openToCollabs || profileSafe.openToCollab
                     ? "Open to collaborations"
                     : "Not currently open"}
                 </span>
               </div>
 
-              {profile.collabPreferences ? (
+              {profileSafe.collabPreferences ? (
                 <p className="text-xs md:text-sm text-slate-200 whitespace-pre-line">
-                  {profile.collabPreferences}
+                  {profileSafe.collabPreferences}
                 </p>
               ) : isSelfProfile ? (
                 <p className="text-xs text-slate-400">
@@ -513,9 +517,9 @@ function ProfilePage() {
               <h2 className="text-sm font-semibold">Platforms & Links</h2>
 
               <div className="flex flex-wrap gap-2 text-[11px]">
-                {Array.isArray(profile.platforms) &&
-                profile.platforms.length > 0 ? (
-                  profile.platforms.map((p) => (
+                {Array.isArray(profileSafe.platforms) &&
+                profileSafe.platforms.length > 0 ? (
+                  profileSafe.platforms.map((p) => (
                     <span
                       key={p}
                       className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200"
@@ -538,9 +542,9 @@ function ProfilePage() {
               <div className="h-px bg-white/10 my-2" />
 
               <div className="flex flex-col gap-1 text-xs">
-                {profile.links?.youtube && (
+                {profileSafe.links?.youtube && (
                   <a
-                    href={profile.links.youtube}
+                    href={profileSafe.links.youtube}
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-300 hover:text-brand-200"
@@ -548,9 +552,9 @@ function ProfilePage() {
                     YouTube
                   </a>
                 )}
-                {profile.links?.instagram && (
+                {profileSafe.links?.instagram && (
                   <a
-                    href={profile.links.instagram}
+                    href={profileSafe.links.instagram}
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-300 hover:text-brand-200"
@@ -558,9 +562,9 @@ function ProfilePage() {
                     Instagram
                   </a>
                 )}
-                {profile.links?.tiktok && (
+                {profileSafe.links?.tiktok && (
                   <a
-                    href={profile.links.tiktok}
+                    href={profileSafe.links.tiktok}
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-300 hover:text-brand-200"
@@ -568,9 +572,9 @@ function ProfilePage() {
                     TikTok
                   </a>
                 )}
-                {profile.links?.twitter && (
+                {profileSafe.links?.twitter && (
                   <a
-                    href={profile.links.twitter}
+                    href={profileSafe.links.twitter}
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-300 hover:text-brand-200"
@@ -578,9 +582,9 @@ function ProfilePage() {
                     Twitter / X
                   </a>
                 )}
-                {profile.links?.website && (
+                {profileSafe.links?.website && (
                   <a
-                    href={profile.links.website}
+                    href={profileSafe.links.website}
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-300 hover:text-brand-200"
@@ -589,8 +593,8 @@ function ProfilePage() {
                   </a>
                 )}
 
-                {!profile.links ||
-                  (Object.values(profile.links || {}).every((v) => !v) &&
+                {!profileSafe.links ||
+                  (Object.values(profileSafe.links || {}).every((v) => !v) &&
                     isSelfProfile && (
                       <p className="text-xs text-slate-400">
                         Add links to your main channels so collaborators can
@@ -613,15 +617,15 @@ function ProfilePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Primary niche</span>
-                  <span>{profile.niche || "Not set"}</span>
+                  <span>{profileSafe.niche || "Not set"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Language</span>
-                  <span>{profile.language || "Not set"}</span>
+                  <span>{profileSafe.language || "Not set"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Location</span>
-                  <span>{profile.location || "Not set"}</span>
+                  <span>{profileSafe.location || "Not set"}</span>
                 </div>
               </div>
             </section>
@@ -630,8 +634,9 @@ function ProfilePage() {
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 space-y-3">
               <h2 className="text-sm font-semibold">Topics & specialties</h2>
               <div className="flex flex-wrap gap-2">
-                {Array.isArray(profile.tags) && profile.tags.length > 0 ? (
-                  profile.tags.map((tag) => (
+                {Array.isArray(profileSafe.tags) &&
+                profileSafe.tags.length > 0 ? (
+                  profileSafe.tags.map((tag) => (
                     <span
                       key={tag}
                       className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[11px] text-emerald-200"
